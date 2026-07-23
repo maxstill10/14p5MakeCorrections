@@ -77,12 +77,12 @@ const Double_t alpha_Lam = 0.642;
 const Double_t alpha_LamBar = -0.642;
 
 //Func
-double GetPsi(double Qx, double Qy);
+double GetPsi(int iOrd, double Qx, double Qy);
 int CentralityBin(int Multiplicity);
 float GetBBCTilePhi(const Int_t e_w, const Int_t iTile);
 TVector3 GetRandomPointOnTile(int position, int tile, int row, int ew);
 bool ScipZeroWeight(double arr[], int size);
-const int nSub = 7;
+const int nSub = 3;
 
 
 // inFile - is a name of name.FemtoDst.root file or a name
@@ -107,17 +107,22 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
     */
 
     //Histograms with corrections
-    TH1F *Coef_A_n_TH[10][nSub];
-    TH1F *Coef_B_n_TH[10][nSub];
-    TH1F *QvecProf_TH[nSub*2]; 
+    TProfile *v1_average[9][2];
+    TH1F *Coef_A_n_TH_Psi1[10][nSub];
+    TH1F *Coef_B_n_TH_Psi1[10][nSub];
+    TH1F *Coef_A_n_TH_Psi2[10][nSub];
+    TH1F *Coef_B_n_TH_Psi2[10][nSub];
+    TH1F *Qvec1Prof_TH[nSub*2];
+    TH1F *Qvec2Prof_TH[nSub*2]; 
    
 
     if(mode == "Centred" || mode == "Flatt"){
         //Recentering
         TFile *input = new TFile("/star/u/mmorozov/14p5SecondRP/correctionsEP_output/output6sem_14p5_new.root", "read");
         for(int iSub=0; iSub!=2*nSub; iSub++){
-	    QvecProf_TH[iSub] = (TH1F*)input->Get(Form("QvecProf_%i", iSub));
-	}
+            Qvec1Prof_TH[iSub] = (TH1F*)input->Get(Form("Qvec1Prof_%i", iSub));
+            Qvec2Prof_TH[iSub] = (TH1F*)input->Get(Form("Qvec2Prof_%i", iSub));
+        }
 
         if(mode == "Flatt"){
 
@@ -125,98 +130,87 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
             TFile *inputCentred = new TFile("/star/u/mmorozov/MaximTest/correctionsEP_output/outputCentred_PolarZ_70.root", "read");
             
             for(int iProf=0; iProf!=10; iProf++){
-		for(int iSub=0; iSub!=nSub; iSub++){
-		    Coef_A_n_TH[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_A_n_%i_%i", iProf, iSub));
-                    Coef_B_n_TH[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_B_n_%i_%i", iProf, iSub));
-		}
+                for(int iSub=0; iSub!=nSub; iSub++){
+                    Coef_A_n_TH_Psi1[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_A_n_Psi1_%i_%i", iProf, iSub));
+                    Coef_B_n_TH_Psi1[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_B_n_Psi1_%i_%i", iProf, iSub));
+                    Coef_A_n_TH_Psi2[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_A_n_Psi2_%i_%i", iProf, iSub));
+                    Coef_B_n_TH_Psi2[iProf][iSub] = (TH1F*)inputCentred->Get(Form("Coef_B_n_Psi2_%i_%i", iProf, iSub));
+                }
             }      
         }
     }
 
-
+    TFile *inputV1 = new TFile("", "read");
+    
+    for(int iCent=0; iCent!=9; iCent++){
+        for(int iSub=0; iSub!=2; iSub++){
+            v1_average[iCent][iSub] = (TProfile*)inputV1->Get(Form("v1_average_%i_%i", iCent, iSub));
+        }
+        
+    }
     
     TFile *output = new TFile(outputFile, "RECREATE");
   
-  
-    //General distribution
-    TH2F *DEdx = new TH2F("DEdx", "dEdx", 300, -3, 3, 300, -2, 15); 
-    TH2F *DEdxProt = new TH2F("DEdxProt", "dEdx of p", 300, -3, 3, 300, -2, 10);
-    TH2F *DEdxPion = new TH2F("DEdxPion", "dEdx of #pi", 300, -3, 3, 300, -2, 10); 
-    TH2F *NsigmakaonMagn = new TH2F("NsigmakaonMagn", "NsigmakaonMagn", 300, -3, 3, 300, -10, 10);
-    TH2F *NsigmapionMagn = new TH2F("NsigmapionMagn", "NsigmapionMagn", 600, -3, 3, 600, -10, 10);
-    TH2F *NsigmaprotMagn = new TH2F("NsigmaprotMagn", "NsigmaprotMagn", 600, -3, 3, 600, -10, 10);
-    TH2F *NsigmakaonTrans = new TH2F("NsigmakaonTrans", "NsigmakaonTrans", 300, -3, 3, 300, -10, 10);
-    TH2F *NsigmapionTrans = new TH2F("NsigmapionTrans", "NsigmapionTrans", 300, -3, 3, 300, -10, 10);
-    TH2F *NsigmaprotTrans = new TH2F("NsigmaprotTrans", "NsigmaprotTrans", 300, -3, 3, 300, -10, 10);
-    TH2F *PrimeVertXvsY = new TH2F("PrimeVertXvsY", "Primery vertex X Vs Y", 500, -5, 5, 500, -5, 5);
-    TH1F *PrimeVertZ = new TH1F("PrimeVertZ", "Primerty vertex Z", 100, -100, 100);
-    TH1F *NHits = new TH1F("NHits", "nHits", 100, 10, 90);
-    TH1F *Pseudorap = new TH1F("Pseudorap", "Pseudorepidity", 100, -10, 10);
-    TH1F *Mom = new TH1F("Mom", "Momentum", 100, 0, 5);
-    //TH2F *BettaVsMom = new TH2F("BettaVsMom", "Betta vs  Momentum", 100, -1, 1, 100, 0, 5);
-
-
-
     //Reaction Plane  
     //0-West TPC
-    //1-East TPC
-    //2-Comb TPC
-    //3-E+W TPC
-    //4-West EPD
-    //5-East EPD
-    //6-E+W EPD   
-    TH1F *QvecHist[9][2*nSub];
+    //1-East TPC 
+    TH1F *Qvec1Hist[9][2*nSub];
+    TH1F *Psi1Hist[9][nSub];
+    TH1F *Qvec2Hist[9][2*nSub];
     TH1F *Psi2Hist[9][nSub];
-    TH1F *Psi2Full_EW[9][6];
 
 
     for(int iHist=0; iHist!=9; iHist++){
-	for(int iSub=0; iSub!=nSub; iSub++){
-	    QvecHist[iHist][2*iSub] = new TH1F(Form("QvecHist_%i_%i", iHist, 2*iSub), "", 500, -1, 1);
-	    QvecHist[iHist][2*iSub+1] = new TH1F(Form("QvecHist_%i_%i", iHist, 2*iSub+1), "", 500, -1, 1);
-	    Psi2Hist[iHist][iSub] = new TH1F(Form("Psi2Hist_%i_%i", iHist, iSub), "", 70, 0, 3.5);
-	}
-	//Psi[i] - Psi[j]
-	for(int i=0; i!=6; i++){
-	    Psi2Full_EW[iHist][i] = new TH1F(Form("Psi2Full_EW_%i_%i", iHist, i), "", 140, -3.5, 3.5);
-	}
+        for(int iSub=0; iSub!=nSub; iSub++){
+            Qvec1Hist[iHist][2*iSub] = new TH1F(Form("Qvec1Hist_%i_%i", iHist, 2*iSub), "", 500, -1, 1);
+            Qvec1Hist[iHist][2*iSub+1] = new TH1F(Form("Qvec1Hist_%i_%i", iHist, 2*iSub+1), "", 500, -1, 1);
+            Qvec2Hist[iHist][2*iSub] = new TH1F(Form("Qvec2Hist_%i_%i", iHist, 2*iSub), "", 500, -1, 1);
+            Qvec2Hist[iHist][2*iSub+1] = new TH1F(Form("Qvec2Hist_%i_%i", iHist, 2*iSub+1), "", 500, -1, 1);
+            Psi1Hist[iHist][iSub] = new TH1F(Form("Psi1Hist_%i_%i", iHist, iSub), "", 140, 0, 7);
+            Psi2Hist[iHist][iSub] = new TH1F(Form("Psi2Hist_%i_%i", iHist, iSub), "", 70, 0, 3.5);
+        }
     }
 
     //Profiles for centering
-    TProfile *QvecProf[2*nSub];
+    TProfile *Qvec1Prof[2*nSub];
+    TProfile *Qvec2Prof[2*nSub];
     for(int iSub=0; iSub!=2*nSub; iSub++){
-        QvecProf[iSub] = new TProfile(Form("QvecProf_%i", iSub), "", 9, 0, 9);
+        Qvec1Prof[iSub] = new TProfile(Form("Qvec1Prof_%i", iSub), "", 9, 0, 9);
+        Qvec2Prof[iSub] = new TProfile(Form("Qvec2Prof_%i", iSub), "", 9, 0, 9);
     }
    
     
     //Profiles for flattening
     //A_n = (-2/n)*<sin(nPsi)>
     //B_n = (2/n)*<cos(nPsi)>
-    TProfile *Coef_A_n[10][nSub];
-    TProfile *Coef_B_n[10][nSub];
+    TProfile *Coef_A_n_Psi1[10][nSub];
+    TProfile *Coef_B_n_Psi1[10][nSub];
+    TProfile *Coef_A_n_Psi2[10][nSub];
+    TProfile *Coef_B_n_Psi2[10][nSub];
 
 
     for(int iProf=0; iProf!=10; iProf++){
         for(int iSub=0; iSub!=nSub; iSub++){
-	    Coef_A_n[iProf][iSub] = new TProfile(Form("Coef_A_n_%i_%i", iProf, iSub), "", 9, 0, 9);
-	    Coef_B_n[iProf][iSub] = new TProfile(Form("Coef_B_n_%i_%i", iProf, iSub), "", 9, 0, 9);
-	}
+            Coef_A_n_Psi1[iProf][iSub] = new TProfile(Form("Coef_A_n_Psi1_%i_%i", iProf, iSub), "", 9, 0, 9);
+            Coef_B_n_Psi1[iProf][iSub] = new TProfile(Form("Coef_B_n_Psi1_%i_%i", iProf, iSub), "", 9, 0, 9);
+            Coef_A_n_Psi2[iProf][iSub] = new TProfile(Form("Coef_A_n_Psi2_%i_%i", iProf, iSub), "", 9, 0, 9);
+            Coef_B_n_Psi2[iProf][iSub] = new TProfile(Form("Coef_B_n_Psi1_%i_%i", iProf, iSub), "", 9, 0, 9);
+	    }
     }
 
     //Resolution
-    TProfile *CosOfDiff = new TProfile("CosOfDiff", "CosOfDiff", 9, 0, 9);
-    TProfile *CosOfDiff_EPD = new TProfile("CosOfDiff_EPD", "Comb - EPD_West", 9, 0, 9);
-    TProfile *CosOfDiff_Comb = new TProfile("CosOfDiff_Comb", "Comb - EPD_East", 9, 0, 9);
+    TProfile *CosOfDiff_1 = new TProfile("CosOfDiff_1", "CosOfDiff for Psi_1", 9, 0, 9);
+    TProfile *CosOfDiff_2 = new TProfile("CosOfDiff_2", "CosOfDiff for Psi_2", 9, 0, 9);
         
 
     //Variables
     //Reaction Plane
-    double QWeight[nSub] = {};
-    double Qvec[2*nSub] = {};
-    double Psi2[nSub] = {};
-    double deltaPsi2[nSub] = {};
+    double QWeight_1[nSub] = {}, QWeight_2[nSub] = {};
+    double Qvec_1[2*nSub] = {}, Qvec_2[2*nSub] = {};
+    double Psi1[nSub] = {}, Psi2[nSub] = {};
+    double deltaPsi1[nSub] = {}, deltaPsi2[nSub] = {};
     double phi, w;
-    int PP, TT, EW, iSide = 0;
+    int PP, TT, EW, iSide = 0, row;
 
 
     //corners EPD
@@ -317,12 +311,8 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
             break;
         }
 
-        TVector3 pVtx = event->primaryVertex();
-        
-        PrimeVertXvsY->Fill(pVtx.X(), pVtx.Y());
-        PrimeVertZ->Fill(pVtx.Z());
 
-	// Simple event cut
+	    // Simple event cut
         if (EventCut(event) == false ) continue;
 	
         
@@ -339,12 +329,16 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
 
         if(cent < 0) continue;
 
-	for(int iSub=0; iSub!=nSub; iSub++){
-	    Qvec[2*iSub] = 0.;
-	    Qvec[2*iSub+1] = 0.;
-	    QWeight[iSub] = 0.;
-	    Psi2[iSub] = 0.;
-	}
+        for(int iSub=0; iSub!=nSub; iSub++){
+            Qvec_1[2*iSub] = 0.;
+            Qvec_1[2*iSub+1] = 0.;
+            QWeight_1[iSub] = 0.;
+            Psi1[iSub] = 0.;
+            Qvec_2[2*iSub] = 0.;
+            Qvec_2[2*iSub+1] = 0.;
+            QWeight_2[iSub] = 0.;
+            Psi2[iSub] = 0.;
+        }
 
         
         
@@ -361,259 +355,223 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
 
             if (!femtoTrack) continue;
             //std::cout << "Track #[" << (iTrk+1) << "/" << nTracks << "]"  << std::endl;
-	    double eta = femtoTrack->pMom().Eta();
+	        double eta = femtoTrack->pMom().Eta();
 
-            DEdx->Fill(femtoTrack->pPtot()*femtoTrack->charge(), femtoTrack->dEdx());
-            NsigmakaonMagn->Fill(femtoTrack->pPtot()*femtoTrack->charge(), femtoTrack->nSigmaKaon());
-            NsigmapionMagn->Fill(femtoTrack->pPtot()*femtoTrack->charge(), femtoTrack->nSigmaPion());
-            NsigmaprotMagn->Fill(femtoTrack->pPtot()*femtoTrack->charge(), femtoTrack->nSigmaProton());
-            NsigmakaonTrans->Fill(femtoTrack->pPt()*femtoTrack->charge(), femtoTrack->nSigmaKaon());
-            NsigmapionTrans->Fill(femtoTrack->pPt()*femtoTrack->charge(), femtoTrack->nSigmaPion());
-            NsigmaprotTrans->Fill(femtoTrack->pPt()*femtoTrack->charge(), femtoTrack->nSigmaProton());
-            NHits->Fill(femtoTrack->nHits());
-            Pseudorap->Fill(eta);
-            Mom->Fill(femtoTrack->pPtot());
-            //BettaVsMom->Fill(femtoTrack->pPtot()*femtoTrack->charge(), femtoTrack->beta());
-
-	    if (femtoTrack->nHits() < 15 || femtoTrack->pPt() < 0.1 || femtoTrack->pPt() > 2. || fabs(femtoTrack->pMom().Eta()) > 1.5 || fabs(femtoTrack->pMom().Eta())<0.1) continue;
+	        if (femtoTrack->nHits() < 15 || femtoTrack->pPt() < 0.1 || femtoTrack->pPt() > 2. || fabs(femtoTrack->pMom().Eta()) > 1.5 || fabs(eta)<0.1) continue;
             if ((Float_t)femtoTrack->nHits()/femtoTrack->nHitsPoss() < 0.52 ) continue;
 
-	    /*if( !isGoodTrack( femtoTrack->pMom(), femtoTrack->nHits(),
-                                femtoTrack->nHitsPoss() ) ) {
-                continue;
-            }*/
-
-	    
-            //if(TMath::Abs(eta)>1.5 || TMath::Abs(eta)<0.1) continue;
-                                   
- 
             double wEff = femtoTrack->pPt();
             double phi = femtoTrack->pMom().Phi(); //femtoTrack->isPrimary() ? femtoTrack->pMom().Phi() : 0.;
-	    if(eta>0) iSide = 0;//West
-	    else if(eta<0) iSide = 1;//East
+            if(eta>0) iSide = 0;//West
+            else if(eta<0) iSide = 1;//East
 
-	    Qvec[2*iSide] += wEff*TMath::Cos(2*phi);
-            Qvec[2*iSide+1] += wEff*TMath::Sin(2*phi);
-            QWeight[iSide] += wEff;
-
-	    Qvec[4] += wEff*TMath::Cos(2*phi);
-            Qvec[5] += wEff*TMath::Sin(2*phi);
-            QWeight[2] += wEff;
-	    QWeight[3] += wEff;
+            Qvec_2[2*iSide] += wEff*TMath::Cos(2*phi);
+            Qvec_2[2*iSide+1] += wEff*TMath::Sin(2*phi);
+            QWeight_2[iSide] += wEff;
 
             
         }//for(Int_t iTrk=0; iTrk<nTracks; iTrk++)
 
 		//.........................................................EpdHit analysis..................................................................
-	int nEpdHits = dst->numberOfEpdHits();
+        int nEpdHits = dst->numberOfEpdHits();
 
-		//EpdHit Loop
-	for(int iEpd=0; iEpd<nEpdHits; iEpd++){
-		//Retrieve i-th EpdHit
-	    StPicoEpdHit *femtoEpdHit = dst->epdHit(iEpd);
+        //EpdHit Loop
+        for(int iEpd=0; iEpd<nEpdHits; iEpd++){
+            //Retrieve i-th EpdHit
+            StPicoEpdHit *femtoEpdHit = dst->epdHit(iEpd);
 
-      	    if(!femtoEpdHit->isGood()) continue;
-      
-      	    PP = femtoEpdHit->position();
-      	    TT = femtoEpdHit->tile();
-      	    EW = femtoEpdHit->side();
-      	    w = femtoEpdHit->nMIP();
+            if(!femtoEpdHit->isGood()) continue;
+    
+            PP = femtoEpdHit->position();
+            TT = femtoEpdHit->tile();
+            EW = femtoEpdHit->side();
+            w = femtoEpdHit->nMIP();
+            row = femtoEpdHit->row();
 
-	    double wEff_EPD = w;
-      	    if(wEff_EPD<0.3) continue;
-      	    if(wEff_EPD>3) wEff_EPD = 3;
+            double wEff_EPD = w;
+            if(wEff_EPD<0.3) continue;
+            if(wEff_EPD>3) wEff_EPD = 3;
 
-	    if(EW == 1){
-        
-        	Qvec[8] += wEff_EPD*TMath::Cos(2*phiCenter[PP-1][TT-1][EW]);
-        	Qvec[9] += wEff_EPD*TMath::Sin(2*phiCenter[PP-1][TT-1][EW]);
-        	QWeight[4] += wEff_EPD;
-      	    }
+            if(EW == 1){
+                wEff_EPD *= fabs(v1_average[cent][0]->GetBinContent(row));
+                Qvec_1[0] += wEff_EPD*TMath::Cos(phiCenter[PP-1][TT-1][EW]);
+                Qvec_1[1] += wEff_EPD*TMath::Sin(phiCenter[PP-1][TT-1][EW]);
+                QWeight_1[0] += wEff_EPD;
+            }
 
-      	    if(EW==-1){
-        	EW = 0;
-        	Qvec[10] += wEff_EPD*TMath::Cos(2*phiCenter[PP-1][TT-1][0]);
-        	Qvec[11] += wEff_EPD*TMath::Sin(2*phiCenter[PP-1][TT-1][0]);
-        	QWeight[5] += wEff_EPD;
-      	    }
-	}
-	QWeight[6] = 1;
-
-        
-        //-------------------------------reaction plane--------------------------------------------------
-        if(ScipZeroWeight(QWeight, nSub) == false) continue;
-        
-	//Get Q vectors
-	int check = 0;            
-        for(int iSub=0; iSub!=nSub; iSub++){
-	    Qvec[2*iSub] = Qvec[2*iSub]/QWeight[iSub];
-	    Qvec[2*iSub+1] = Qvec[2*iSub+1]/QWeight[iSub];
-	    if(fabs(Qvec[2*iSub])>999 || fabs(Qvec[2*iSub+1])>999) check = 1;
-	}
-	if(check == 1) continue;
-	Qvec[6] = Qvec[0] + Qvec[2];
-	Qvec[7] = Qvec[1] + Qvec[3];
-	Qvec[12] = Qvec[8] + Qvec[10];
-	Qvec[13] = Qvec[9] + Qvec[11];
-
-	
-	//Centring collibration
-	if(mode == "Centred" || mode == "Flatt"){
-            //Recentering       
-	    for(int iSub = 0; iSub!=2*nSub; iSub++){
-	        Qvec[iSub] -= QvecProf_TH[iSub]->GetBinContent(cent+1);
-	    }
+            if(EW==-1){
+                wEff_EPD *= fabs(v1_average[cent][1]->GetBinContent(row));
+                Qvec_1[2] += wEff_EPD*TMath::Cos(phiCenter[PP-1][TT-1][0]);
+                Qvec_1[3] += wEff_EPD*TMath::Sin(phiCenter[PP-1][TT-1][0]);
+                QWeight_1[1] += wEff_EPD;
+            }
         }
 
-	
-	//Get Psi2
-	for(int iSub=0; iSub!=nSub; iSub++){
-	    Psi2[iSub] = GetPsi(Qvec[2*iSub], Qvec[2*iSub+1]);
-	    if(Psi2[iSub] > 3.5) check = 1;
-	}
-	if(check == 1) continue;
-			            
+            
+        //-------------------------------reaction plane--------------------------------------------------
+        if(ScipZeroWeight(QWeight_1, nSub) == false) continue;
+        if(ScipZeroWeight(QWeight_2, nSub) == false) continue;
+            
+        //Get Q vectors
+        bool check = true;            
+        for(int iSub=0; iSub!=nSub; iSub++){
+            Qvec_1[2*iSub] = Qvec_1[2*iSub]/QWeight_1[iSub];
+            Qvec_1[2*iSub+1] = Qvec_1[2*iSub+1]/QWeight_1[iSub];
+            if(fabs(Qvec_1[2*iSub])>999 || fabs(Qvec_1[2*iSub+1])>999) check = false;
 
-	//Flattening collibration
+            Qvec_2[2*iSub] = Qvec_2[2*iSub]/QWeight_2[iSub];
+            Qvec_2[2*iSub+1] = Qvec_2[2*iSub+1]/QWeight_2[iSub];
+            if(fabs(Qvec_2[2*iSub])>999 || fabs(Qvec_2[2*iSub+1])>999) check = false;
+        }
+        if(!check) continue;
+        Qvec_1[4] = Qvec_1[0] + Qvec_1[2];
+        Qvec_1[5] = Qvec_1[1] + Qvec_1[3];
+        Qvec_2[4] = Qvec_2[0] + Qvec_2[2];
+        Qvec_2[5] = Qvec_2[1] + Qvec_2[3];
+
+        
+        //Centring collibration
+        if(mode == "Centred" || mode == "Flatt"){
+            //Recentering       
+            for(int iSub = 0; iSub!=2*nSub; iSub++){
+                Qvec_1[iSub] -= Qvec1Prof_TH[iSub]->GetBinContent(cent+1);
+                Qvec_2[iSub] -= Qvec2Prof_TH[iSub]->GetBinContent(cent+1);
+            }
+        }
+
+        
+        //Get Psi
+        for(int iSub=0; iSub!=nSub; iSub++){
+            Psi1[iSub] = GetPsi(1, Qvec_1[2*iSub], Qvec_1[2*iSub+1]);
+            if(Psi1[iSub] > 7) check = false;
+
+            Psi2[iSub] = GetPsi(2, Qvec_2[2*iSub], Qvec_2[2*iSub+1]);
+            if(Psi2[iSub] > 3.5) check = false;
+        }
+        if(!check) continue;
+                            
+
+        //Flattening collibration
         if(mode == "Flatt"){
             //Flattaning
             for(int iProf=0; iProf!=10; iProf++){
-		for(int iSub=0; iSub!=nSub; iSub++){
-		    deltaPsi2[iSub] += Coef_A_n_TH[iProf][iSub]->GetBinContent(cent+1)*TMath::Cos((iProf+1)*2*Psi2[iSub]) + \
-                                       Coef_B_n_TH[iProf][iSub]->GetBinContent(cent+1)*TMath::Sin((iProf+1)*2*Psi2[iSub]);
-		}	
+                for(int iSub=0; iSub!=nSub; iSub++){
+                    deltaPsi1[iSub] += Coef_A_n_TH_Psi1[iProf][iSub]->GetBinContent(cent+1)*TMath::Cos((iProf+1)*Psi1[iSub]) + \
+                                        Coef_B_n_TH_Psi1[iProf][iSub]->GetBinContent(cent+1)*TMath::Sin((iProf+1)*Psi1[iSub]);
+                    deltaPsi2[iSub] += Coef_A_n_TH_Psi2[iProf][iSub]->GetBinContent(cent+1)*TMath::Cos((iProf+1)*2*Psi2[iSub]) + \
+                                        Coef_B_n_TH_Psi2[iProf][iSub]->GetBinContent(cent+1)*TMath::Sin((iProf+1)*2*Psi2[iSub]);
+                }
             }
-	    
-	    for(int iSub=0; iSub!=nSub; iSub++){
-		Psi2[iSub] += deltaPsi2[iSub]/2.;
-		while(Psi2[iSub]>TMath::Pi()) Psi2[iSub] -= TMath::Pi();
+        
+            for(int iSub=0; iSub!=nSub; iSub++){
+                Psi1[iSub] += deltaPsi1[iSub];
+                while(Psi1[iSub]>2*TMath::Pi()) Psi2[iSub] -= 2*TMath::Pi();
+                while(Psi1[iSub]<0.0) Psi2[iSub] += 2*TMath::Pi();
+                deltaPsi1[iSub] = 0.0;
+                
+                Psi2[iSub] += deltaPsi2[iSub]/2.;
+                while(Psi2[iSub]>TMath::Pi()) Psi2[iSub] -= TMath::Pi();
                 while(Psi2[iSub]<0.0) Psi2[iSub] += TMath::Pi();
                 deltaPsi2[iSub] = 0.0;
-	    }
+            }
         }    
-                     
-                                
+                        
+                                    
         //Fill histograms
-	for(int iSub = 0; iSub!=nSub; iSub++){
-	    QvecHist[cent][2*iSub]->Fill(Qvec[2*iSub]);
-	    QvecHist[cent][2*iSub+1]->Fill(Qvec[2*iSub+1]);
-	    Psi2Hist[cent][iSub]->Fill(Psi2[iSub]);
-	}            
+        for(int iSub = 0; iSub!=nSub; iSub++){
+            Qvec1Hist[cent][2*iSub]->Fill(Qvec_1[2*iSub]);
+            Qvec1Hist[cent][2*iSub+1]->Fill(Qvec_1[2*iSub+1]);
+            Psi1Hist[cent][iSub]->Fill(Psi1[iSub]);
+
+            Qvec2Hist[cent][2*iSub]->Fill(Qvec_2[2*iSub]);
+            Qvec2Hist[cent][2*iSub+1]->Fill(Qvec_2[2*iSub+1]);
+            Psi2Hist[cent][iSub]->Fill(Psi2[iSub]);
+        }            
 
 
         if(mode == "6sem"){
             //Profiles for recentering
             for(int iSub=0; iSub!=nSub*2; iSub++){
-	        QvecProf[iSub]->Fill(cent, Qvec[iSub]);
-	    }
+                Qvec1Prof[iSub]->Fill(cent, Qvec_1[iSub]);
+                Qvec2Prof[iSub]->Fill(cent, Qvec_2[iSub]);
+            }
         }    
 
 
         if(mode == "Centred"){
             //Profiles for flattening
             for(int iProf=0; iProf!=10; iProf++){
-	        for(int iSub=0; iSub!=nSub; iSub++){
-	      	    Coef_A_n[iProf][iSub]->Fill(cent, (-2.0/(iProf+1))*TMath::Sin((iProf+1)*2*Psi2[iSub]));
-		    Coef_B_n[iProf][iSub]->Fill(cent, (2.0/(iProf+1))*TMath::Cos((iProf+1)*2*Psi2[iSub]));
-		}
+                for(int iSub=0; iSub!=nSub; iSub++){
+                    Coef_A_n_Psi1[iProf][iSub]->Fill(cent, (-2.0/(iProf+1))*TMath::Sin((iProf+1)*Psi1[iSub]));
+                    Coef_B_n_Psi1[iProf][iSub]->Fill(cent, (2.0/(iProf+1))*TMath::Cos((iProf+1)*Psi1[iSub]));
+
+                    Coef_A_n_Psi2[iProf][iSub]->Fill(cent, (-2.0/(iProf+1))*TMath::Sin((iProf+1)*2*Psi2[iSub]));
+                    Coef_B_n_Psi2[iProf][iSub]->Fill(cent, (2.0/(iProf+1))*TMath::Cos((iProf+1)*2*Psi2[iSub]));
+                }
             }        
         }
 
-	Psi2Full_EW[cent][0]->Fill(Psi2[2]-Psi2[0]);
-	Psi2Full_EW[cent][1]->Fill(Psi2[2]-Psi2[1]);
-	Psi2Full_EW[cent][2]->Fill(Psi2[3]-Psi2[0]);
-	Psi2Full_EW[cent][3]->Fill(Psi2[3]-Psi2[1]);
-	Psi2Full_EW[cent][4]->Fill(Psi2[2]-Psi2[3]);
-	Psi2Full_EW[cent][5]->Fill(Psi2[0]-Psi2[1]);
-        CosOfDiff->Fill(cent, TMath::Cos(2*(Psi2[1] - Psi2[0])));
-	CosOfDiff_EPD->Fill(cent, TMath::Cos(2*(Psi2[2] - Psi2[4])));
-	CosOfDiff_Comb->Fill(cent, TMath::Cos(2*(Psi2[2] - Psi2[5])));
+        CosOfDiff_1->Fill(cent, TMath::Cos(Psi1[1] - Psi1[0]));
+        CosOfDiff_2->Fill(cent, TMath::Cos(2*(Psi2[1] - Psi2[0])));
+        
         
 
     }//for(Long64_t iEvent=0; iEvent<events2read; iEvent++)
 
-    //General distribution
-    DEdx->GetXaxis()->SetTitle("p [GeV/c]");
-    DEdx->GetYaxis()->SetTitle("dE/dx [GeV/m]");
-    DEdx->GetXaxis()->SetLabelSize(0.05);
-    DEdx->GetXaxis()->SetTitleSize(0.05);
-    DEdx->GetYaxis()->SetLabelSize(0.05);
-    DEdx->GetYaxis()->SetTitleSize(0.05);
-       
-    PrimeVertXvsY->GetXaxis()->SetTitle("x [sm]");
-    PrimeVertXvsY->GetYaxis()->SetTitle("y [sm]");
-    PrimeVertXvsY->GetXaxis()->SetLabelSize(0.05);
-    PrimeVertXvsY->GetXaxis()->SetTitleSize(0.05);
-    PrimeVertXvsY->GetYaxis()->SetLabelSize(0.05);
-    PrimeVertXvsY->GetYaxis()->SetTitleSize(0.05);
-    PrimeVertZ->GetXaxis()->SetTitle("z [sm]");
-    PrimeVertZ->GetXaxis()->SetLabelSize(0.05);
-    PrimeVertZ->GetXaxis()->SetTitleSize(0.05);
 
     //EP Distributions
     for(int iCent=0; iCent!=9; iCent++){
-	QvecHist[iCent][0]->SetTitle(Form("Qx West TPC (%i)", iCent));
-        QvecHist[iCent][1]->SetTitle(Form("Qy West TPC (%i)", iCent));
-        QvecHist[iCent][2]->SetTitle(Form("Qx East TPC (%i)", iCent));
-        QvecHist[iCent][3]->SetTitle(Form("Qy East TPC (%i)", iCent));
-        QvecHist[iCent][4]->SetTitle(Form("Qx Comb TPC (%i)", iCent));
-        QvecHist[iCent][5]->SetTitle(Form("Qy Comb TPC (%i)", iCent));
-        QvecHist[iCent][6]->SetTitle(Form("Qx E+W TPC (%i)", iCent));
-        QvecHist[iCent][7]->SetTitle(Form("Qy E+W TPC (%i)", iCent));
-        QvecHist[iCent][8]->SetTitle(Form("Qx West EPD (%i)", iCent));
-        QvecHist[iCent][9]->SetTitle(Form("Qy West EPD (%i)", iCent));
-        QvecHist[iCent][10]->SetTitle(Form("Qx East EPD (%i)", iCent));
-        QvecHist[iCent][11]->SetTitle(Form("Qy East EPD (%i)", iCent));
-        QvecHist[iCent][12]->SetTitle(Form("Qx E+W EPD (%i)", iCent));
-        QvecHist[iCent][13]->SetTitle(Form("Qy E+W EPD (%i)", iCent));
+	    Qvec1Hist[iCent][0]->SetTitle(Form("Qx West EPD first harm (%i)", iCent));
+        Qvec1Hist[iCent][1]->SetTitle(Form("Qy West EPD first harm (%i)", iCent));
+        Qvec1Hist[iCent][2]->SetTitle(Form("Qx East EPD first harm (%i)", iCent));
+        Qvec1Hist[iCent][3]->SetTitle(Form("Qy East EPD first harm (%i)", iCent));
+        Qvec1Hist[iCent][4]->SetTitle(Form("Qx Comb EPD first harm (%i)", iCent));
+        Qvec1Hist[iCent][5]->SetTitle(Form("Qy Comb EPD first harm (%i)", iCent));
 
-        Psi2Hist[iCent][0]->SetTitle(Form("West TPC (%i)", iCent));
-        Psi2Hist[iCent][1]->SetTitle(Form("East TPC (%i)", iCent));
-        Psi2Hist[iCent][2]->SetTitle(Form("Comb TPC (%i)", iCent));
-        Psi2Hist[iCent][3]->SetTitle(Form("E+W TPC (%i)", iCent));
-        Psi2Hist[iCent][4]->SetTitle(Form("West EPD (%i)", iCent));
-        Psi2Hist[iCent][5]->SetTitle(Form("East EPD (%i)", iCent));
-        Psi2Hist[iCent][6]->SetTitle(Form("E+W EPD (%i)", iCent));
+        Qvec2Hist[iCent][0]->SetTitle(Form("Qx West TPC second harm (%i)", iCent));
+        Qvec2Hist[iCent][1]->SetTitle(Form("Qy West TPC second harm (%i)", iCent));
+        Qvec2Hist[iCent][2]->SetTitle(Form("Qx East TPC second harm (%i)", iCent));
+        Qvec2Hist[iCent][3]->SetTitle(Form("Qy East TPC second harm (%i)", iCent));
+        Qvec2Hist[iCent][4]->SetTitle(Form("Qx Comb TPC second harm (%i)", iCent));
+        Qvec2Hist[iCent][5]->SetTitle(Form("Qy Comb TPC second harm (%i)", iCent));
 
-	//Psi_i - Psi_j
-	Psi2Full_EW[iCent][0]->SetTitle(Form("Comb - West (%i)", iCent));
-	Psi2Full_EW[iCent][1]->SetTitle(Form("Comb - East (%i)", iCent));
-	Psi2Full_EW[iCent][2]->SetTitle(Form("E+W - West (%i)", iCent));
-	Psi2Full_EW[iCent][3]->SetTitle(Form("E+W - East (%i)", iCent));
-	Psi2Full_EW[iCent][4]->SetTitle(Form("Comb - E+W (%i)", iCent));
-	Psi2Full_EW[iCent][5]->SetTitle(Form("West - East (%i)", iCent));
+        Psi1Hist[iCent][0]->SetTitle(Form("West Psi_1 EPD (%i)", iCent));
+        Psi1Hist[iCent][1]->SetTitle(Form("East Psi_1 EPD (%i)", iCent));
+        Psi1Hist[iCent][2]->SetTitle(Form("Comb Psi_1 EPD (%i)", iCent));
+        
+        Psi2Hist[iCent][0]->SetTitle(Form("West Psi_2 TPC (%i)", iCent));
+        Psi2Hist[iCent][1]->SetTitle(Form("East Psi_2 TPC (%i)", iCent));
+        Psi2Hist[iCent][2]->SetTitle(Form("Comb Psi_2 TPC (%i)", iCent));
 
     }
-    QvecProf[0]->SetTitle("Profile Qx West TPC");
-    QvecProf[1]->SetTitle("Profile Qy West TPC");
-    QvecProf[2]->SetTitle("Profile Qx East TPC");
-    QvecProf[3]->SetTitle("Profile Qy East TPC");
-    QvecProf[4]->SetTitle("Profile Qx Comb TPC");
-    QvecProf[5]->SetTitle("Profile Qy Comb TPC");
-    QvecProf[6]->SetTitle("Profile Qx E+W TPC");
-    QvecProf[7]->SetTitle("Profile Qy E+W TPC");
-    QvecProf[8]->SetTitle("Profile Qx West EPD");
-    QvecProf[9]->SetTitle("Profile Qy West EPD");
-    QvecProf[10]->SetTitle("Profile Qx East EPD");
-    QvecProf[11]->SetTitle("Profile Qy East EPD");
-    QvecProf[12]->SetTitle("Profile Qx E+W EPD");
-    QvecProf[13]->SetTitle("Profile Qy E+W EPD");
+    Qvec1Prof[0]->SetTitle("Profile Qx West EPD first harm");
+    Qvec1Prof[1]->SetTitle("Profile Qy West EPD first harm");
+    Qvec1Prof[2]->SetTitle("Profile Qx East EPD first harm");
+    Qvec1Prof[3]->SetTitle("Profile Qy East EPD first harm");
+    Qvec1Prof[4]->SetTitle("Profile Qx Comb EPD first harm");
+    Qvec1Prof[5]->SetTitle("Profile Qy Comb EPD first harm");
+
+    Qvec2Prof[0]->SetTitle("Profile Qx West TPC second harm");
+    Qvec2Prof[1]->SetTitle("Profile Qy West TPC second harm");
+    Qvec2Prof[2]->SetTitle("Profile Qx East TPC second harm");
+    Qvec2Prof[3]->SetTitle("Profile Qy East TPC second harm");
+    Qvec2Prof[4]->SetTitle("Profile Qx Comb TPC second harm");
+    Qvec2Prof[5]->SetTitle("Profile Qy Comb TPC second harm");
 
     for(int i=0; i!=10; i++){
-	Coef_A_n[i][0]->SetTitle(Form("A_n_%i West TPC", i));
-	Coef_B_n[i][0]->SetTitle(Form("B_n_%i West TPC", i));
-	Coef_A_n[i][1]->SetTitle(Form("A_n_%i East TPC", i));
-        Coef_B_n[i][1]->SetTitle(Form("B_n_%i East TPC", i));
-	Coef_A_n[i][2]->SetTitle(Form("A_n_%i Comb TPC", i));
-        Coef_B_n[i][2]->SetTitle(Form("B_n_%i Comb TPC", i));
-	Coef_A_n[i][3]->SetTitle(Form("A_n_%i E+W TPC", i));
-        Coef_B_n[i][3]->SetTitle(Form("B_n_%i E+W TPC", i));
-	Coef_A_n[i][4]->SetTitle(Form("A_n_%i West EPD", i));
-        Coef_B_n[i][4]->SetTitle(Form("B_n_%i West EPD", i));
-	Coef_A_n[i][5]->SetTitle(Form("A_n_%i East EPD", i));
-        Coef_B_n[i][5]->SetTitle(Form("B_n_%i East EPD", i));
-	Coef_A_n[i][6]->SetTitle(Form("A_n_%i E+W EPD", i));
-        Coef_B_n[i][6]->SetTitle(Form("B_n_%i E+W EPD", i));
+	    Coef_A_n_Psi1[i][0]->SetTitle(Form("A_n_%i West Psi_1 EPD", i));
+	    Coef_B_n_Psi1[i][0]->SetTitle(Form("B_n_%i West Psi_1 EPD", i));
+	    Coef_A_n_Psi1[i][1]->SetTitle(Form("A_n_%i East Psi_1 EPD", i));
+        Coef_B_n_Psi1[i][1]->SetTitle(Form("B_n_%i East Psi_1 EPD", i));
+	    Coef_A_n_Psi1[i][2]->SetTitle(Form("A_n_%i Comb Psi_1 EPD", i));
+        Coef_B_n_Psi1[i][2]->SetTitle(Form("B_n_%i Comb Psi_1 EPD", i));
+        
+        Coef_A_n_Psi2[i][0]->SetTitle(Form("A_n_%i West Psi_2 TPC", i));
+	    Coef_B_n_Psi2[i][0]->SetTitle(Form("B_n_%i West Psi_2 TPC", i));
+	    Coef_A_n_Psi2[i][1]->SetTitle(Form("A_n_%i East Psi_2 TPC", i));
+        Coef_B_n_Psi2[i][1]->SetTitle(Form("B_n_%i East Psi_2 TPC", i));
+	    Coef_A_n_Psi2[i][2]->SetTitle(Form("A_n_%i Comb Psi_2 TPC", i));
+        Coef_B_n_Psi2[i][2]->SetTitle(Form("B_n_%i Comb Psi_2 TPC", i));
     }
 
     femtoReader->Finish();
@@ -649,10 +607,10 @@ Bool_t isGoodTrack(const TVector3& mom, const Int_t& nHits,
 }
 
 //Get corner EPD
-double GetPsi(double Qx, double Qy){
+double GetPsi(int iOrd, double Qx, double Qy){
     double Psi;
-    Psi = atan2(Qy, Qx)/2.;
-    if(Psi<0.) Psi += TMath::Pi();
+    Psi = atan2(Qy, Qx)/iOrd;
+    if(Psi<0.) Psi += 2*TMath::Pi() / iOrd;
     return Psi;
 
 }
