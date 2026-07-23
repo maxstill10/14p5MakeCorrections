@@ -1,0 +1,29 @@
+<!-- Task description -->
+<job maxFilesPerProcess="20" filesPerHour="8" fileListSyntax="xrootd">
+<!-- Decription of the task -->
+<shell>singularity exec -e -B /direct -B /star -B /afs -B /gpfs -B /sdcc/lustre02 /cvmfs/star.sdcc.bnl.gov/containers/rhic_sl7.sif</shell>
+<command>
+    <!-- setenv NODEBUG yes -->
+
+    ln -s /star/u/mmorozov/14p5SecondRP/PicoDstAnalyzer.C .
+    ln -s /star/u/mmorozov/14p5SecondRP/MaxRunner.C .
+    ln -s /star/u/mmorozov/14p5SecondRP/StRoot .
+    ln -s /star/u/mmorozov/14p5SecondRP/.sl73_gcc485 .
+    ln -s /star/u/mmorozov/14p5SecondRP/libStPicoDst.so .
+
+    root -b -l -q MaxRunner.C\(\"$FILELIST\",\"$JOBID.root\",\"Centred\"\)
+    </command>
+
+<!-- Get input files from get_file_lis.pl -->
+<input URL="catalog:star.bnl.gov?filetype=daq_reco_picoDst,trgsetupname=production_14p5GeV_2019,production=P23id,filename~st_physics,storage!=hpss" preferStorage="local" singleCopy="true" nFiles="all" /> <!-- nFiles="all"  -->
+<stdout URL="file:/star/data01/pwg/mmorozov/Polarization/general/log/$JOBID.out"/>
+<stderr URL="file:/star/data01/pwg/mmorozov/Polarization/general/log/$JOBID.err"/>
+<output fromScratch="$JOBID.root" toURL="file:/star/data01/pwg/mmorozov/Polarization/general/data/"/>
+
+
+  <Generator>
+    <Location>/star/data01/pwg/mmorozov/Polarization/general/log</Location>
+  </Generator>
+
+
+</job>
