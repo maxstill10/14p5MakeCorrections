@@ -409,12 +409,12 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
 
             
         //-------------------------------reaction plane--------------------------------------------------
-        if(ScipZeroWeight(QWeight_1, nSub) == false) continue;
-        if(ScipZeroWeight(QWeight_2, nSub) == false) continue;
+        if(!ScipZeroWeight(QWeight_1, nSub)) continue;
+        if(!ScipZeroWeight(QWeight_2, nSub)) continue;
             
         //Get Q vectors
         bool check = true;            
-        for(int iSub=0; iSub!=nSub; iSub++){
+        for(int iSub=0; iSub!=nSub-1; iSub++){
             Qvec_1[2*iSub] = Qvec_1[2*iSub]/QWeight_1[iSub];
             Qvec_1[2*iSub+1] = Qvec_1[2*iSub+1]/QWeight_1[iSub];
             if(fabs(Qvec_1[2*iSub])>999 || fabs(Qvec_1[2*iSub+1])>999) check = false;
@@ -424,8 +424,8 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
             if(fabs(Qvec_2[2*iSub])>999 || fabs(Qvec_2[2*iSub+1])>999) check = false;
         }
         if(!check) continue;
-        Qvec_1[4] = Qvec_1[0] + Qvec_1[2];
-        Qvec_1[5] = Qvec_1[1] + Qvec_1[3];
+        Qvec_1[4] = Qvec_1[0] - Qvec_1[2];
+        Qvec_1[5] = Qvec_1[1] - Qvec_1[3];
         Qvec_2[4] = Qvec_2[0] + Qvec_2[2];
         Qvec_2[5] = Qvec_2[1] + Qvec_2[3];
 
