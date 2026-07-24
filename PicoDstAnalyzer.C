@@ -140,7 +140,7 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
         }
     }
 
-    TFile *inputV1 = new TFile("", "read");
+    TFile *inputV1 = new TFile("/star/u/mmorozov/14p5MakeCorrections/correctionsEP_output/outputV1.root", "read");
     
     for(int iCent=0; iCent!=9; iCent++){
         for(int iSub=0; iSub!=2; iSub++){
