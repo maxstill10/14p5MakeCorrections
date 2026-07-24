@@ -25,8 +25,8 @@
 #include "TString.h"
 
 //_________________
-void MaxRunner(const Char_t *inFileName = "root://xrdstar.rcf.bnl.gov:1095//home/starlib/home/starreco/reco/production_14p5GeV_2019/ReversedFullField/P21ic/2019/140/20140001/st_physics_20140001_raw_0000002.picoDst.root", 
-                 const Char_t *outFileName = "/star/u/mmorozov/MaximTest/out.root",
+void MaxRunner(const Char_t *inFileName = "/star/u/mmorozov/makeNewProd/st_physics_20124023_raw_3500008.picoDst.root", 
+                 const Char_t *outFileName = "/star/u/mmorozov/14p5MakeCorrections/out.root",
 		 const Char_t *mode = "6sem") {
   // Next line is not needed if you are not running in a standalone mode
   cout << "Started Runner!" << endl;

@@ -140,7 +140,7 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
         }
     }
 
-    TFile *inputV1 = new TFile("", "read");
+    TFile *inputV1 = new TFile("/star/u/mmorozov/14p5MakeCorrections/correctionsEP_output/outputV1.root", "read");
     
     for(int iCent=0; iCent!=9; iCent++){
         for(int iSub=0; iSub!=2; iSub++){
@@ -409,8 +409,8 @@ void PicoDstAnalyzer(const Char_t *inFile, const Char_t *outputFile,
 
             
         //-------------------------------reaction plane--------------------------------------------------
-        if(!ScipZeroWeight(QWeight_1, nSub)) continue;
-        if(!ScipZeroWeight(QWeight_2, nSub)) continue;
+        if(!ScipZeroWeight(QWeight_1, nSub-1)) continue;
+        if(!ScipZeroWeight(QWeight_2, nSub-1)) continue;
             
         //Get Q vectors
         bool check = true;            
